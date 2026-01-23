@@ -1,23 +1,25 @@
-import * as vscode from "vscode";
-import * as ts from "typescript";
-import {addWholeComment} from "./WholeComment";
-import {addSelectComment} from "./SelectComment";
+import * as vscode from 'vscode';
+import * as ts from 'typescript';
+// import { addWholeComment } from './WholeComment';
+import { CommentController } from './CommentController';
+
 export function activate(ctx: vscode.ExtensionContext) {
   {
-    const disposable = vscode.commands.registerCommand("vscode-xcomment.wholeComment", () => {
-      vscode.window.showInformationMessage("wholeComment vscode-xcomment!");
-      addWholeComment();
+    const disposable = vscode.commands.registerCommand('vscode-xcomment.params', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        const controller = new CommentController(editor);
+        controller.commentParams();
+      }
     });
     ctx.subscriptions.push(disposable);
   }
   {
-    const disposable = vscode.commands.registerCommand("vscode-xcomment.selectComment", () => {
-      vscode.window.showInformationMessage("selectComment vscode-xcomment!");
-
+    const disposable = vscode.commands.registerCommand('vscode-xcomment.method', () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        const diagnostics = vscode.languages.getDiagnostics(editor.document.uri);
-        console.log(diagnostics);
+        const controller = new CommentController(editor);
+        controller.commentMethod();
       }
     });
 

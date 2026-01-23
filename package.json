@@ -14,40 +14,56 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-xcomment.wholeComment",
-        "title": "xComment:Whole"
+        "command": "vscode-xcomment.method",
+        "title": "xComment:Method"
       },
       {
-        "command": "vscode-xcomment.selectComment",
-        "title": "xComment:Select"
+        "command": "vscode-xcomment.params",
+        "title": "xComment:Params"
+      },
+      {
+        "command": "vscode-xcomment.add",
+        "title": "xComment:Add"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "vscode-xcomment.wholeComment",
+          "command": "vscode-xcomment.method",
           "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/",
           "group": "1_modification@100",
-          "alt": "vscode-xcomment.wholeComment",
+          "alt": "vscode-xcomment.method",
           "key": "alt+A+/"
         },
         {
-          "command": "vscode-xcomment.selectComment",
+          "command": "vscode-xcomment.params",
           "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/",
           "group": "1_modification@101",
-          "alt": "vscode-xcomment.selectComment",
+          "alt": "vscode-xcomment.params",
+          "key": "alt+S+/"
+        },
+        {
+          "command": "vscode-xcomment.add",
+          "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/",
+          "group": "1_modification@102",
+          "alt": "vscode-xcomment.add",
           "key": "alt+/"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "vscode-xcomment.wholeComment",
+        "command": "vscode-xcomment.method",
         "key": "alt+A+/",
         "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/"
       },
       {
-        "command": "vscode-xcomment.selectComment",
+        "command": "vscode-xcomment.params",
+        "key": "alt+S+/",
+        "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/"
+      },
+      {
+        "command": "vscode-xcomment.add",
         "key": "alt+/",
         "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/"
       }

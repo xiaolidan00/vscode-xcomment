@@ -2,8 +2,10 @@
 
 支持文件js,ts,vue
 
-- 全文档给函数添加注释
-- 全文档给参数属性等添加注释
+选中代码或打开文档（未选择文本默认全文档）
+
+- 右击选择`xComment:Method`或使用快捷键`Alt+A+/`给函数方法添加注释
+- 选中内容，右击`XComment:Params`或使用快捷键`Alt+S+/`给参数属性等添加注释
 -
 
 https://astexplorer.net/
@@ -15,10 +17,6 @@ VUE AST
 @vue/compiler-dom
 
 TS TSX AST ts-morph
-
-- 右击选择`XComment:All`全文档添加注释
-- 选中内容，右击`XComment:Add`添加注释
-- 快捷键：`Alt+/`添加注释
 
 右键
 https://code.visualstudio.com/api/references/contribution-points#contributes.menus
