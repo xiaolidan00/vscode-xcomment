@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as ts from 'typescript';
-// import { addWholeComment } from './WholeComment';
 import { CommentController } from './CommentController';
 
 export function activate(ctx: vscode.ExtensionContext) {

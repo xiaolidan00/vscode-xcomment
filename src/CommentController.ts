@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import * as ts from 'typescript';
-import { JSDOM } from 'jsdom';
+
 export class CommentController {
   editor: vscode.TextEditor;
-  newNodeMap = new Map<ts.Node, ts.Node>();
+  commentList: Array<[number, number, string]> = [];
   constructor(editor: vscode.TextEditor) {
     this.editor = editor;
   }
   clear() {
-    this.newNodeMap.clear();
+    this.commentList = [];
   }
   /** 检查是否有错误 */
   checkError() {
@@ -31,129 +31,59 @@ export class CommentController {
     return false;
   }
 
-  checkDocs(node: ts.Node, sourceFile: ts.SourceFile, cb: (msg?: string[]) => void) {
+  checkDocs(
+    node: ts.Node,
+    sourceFile: ts.SourceFile,
+    cb: (start: number, end: number, msg?: string[]) => void
+  ) {
     //@ts-ignore
     if (node.jsDoc && node.jsDoc.length > 0) {
       //有jsDoc
     } else {
+      let start = node.pos;
+      let end = node.pos;
       const comments: string[] = [];
       const leadingComments = ts.getLeadingCommentRanges(sourceFile.text, node.pos);
       if (leadingComments) {
         leadingComments.forEach((comment) => {
+          if (comment.pos < start) {
+            start = comment.pos;
+          }
           const s = sourceFile.text.substring(comment.pos, comment.end);
           comments.push(s.replace(/[\*\/]+/g, ''));
         });
       }
       const tailingComments = ts.getTrailingCommentRanges(sourceFile.text, node.end);
       if (tailingComments) {
+        let start1 = node.end,
+          end1 = node.pos;
         tailingComments.forEach((comment) => {
+          end1 = Math.max(comment.end, end1);
+          start1 = Math.min(comment.pos, start1);
           const s = sourceFile.text.substring(comment.pos, comment.end);
           comments.push(s.replace(/[\*\/]+/g, ''));
         });
+        if (start1 < end1) {
+          this.commentList.push([start1, end1, '']);
+        }
       }
 
       if (comments && comments.length > 0) {
-        cb(comments);
+        cb(start, end, comments);
       } else {
         //无注释
-        cb();
+        cb(start, end);
       }
     }
   }
-  addComment(stmt: ts.Node, comments: string[]) {
-    let newStmt;
-    if (ts.isFunctionDeclaration(stmt)) {
-      newStmt = ts.factory.createFunctionDeclaration(
-        stmt.modifiers,
-        stmt.asteriskToken,
-        stmt.name,
-        stmt.typeParameters,
-        stmt.parameters,
-        stmt.type,
-        stmt.body
-      );
-    } else if (ts.isMethodDeclaration(stmt)) {
-      newStmt = ts.factory.createMethodDeclaration(
-        stmt.modifiers,
-        stmt.asteriskToken,
-        stmt.name,
-        stmt.questionToken,
-        stmt.typeParameters,
-        stmt.parameters,
-        stmt.type,
-        stmt.body
-      );
-    } else if (ts.isArrowFunction(stmt)) {
-      newStmt = ts.factory.createArrowFunction(
-        stmt.modifiers,
-        stmt.typeParameters,
-        stmt.parameters,
-        stmt.type,
-        stmt.equalsGreaterThanToken,
-        stmt.body
-      );
-    } else if (ts.isConstructorDeclaration(stmt)) {
-      newStmt = ts.factory.createConstructorDeclaration(stmt.modifiers, stmt.parameters, stmt.body);
-    } else if (ts.isMethodSignature(stmt)) {
-      newStmt = ts.factory.createMethodSignature(
-        stmt.modifiers,
-        stmt.name,
-        stmt.questionToken,
-        stmt.typeParameters,
-        stmt.parameters,
-        stmt.type
-      );
-    } else if (ts.isPropertyDeclaration(stmt)) {
-      /**props */
-      newStmt = ts.factory.createPropertyDeclaration(
-        stmt.modifiers,
-        stmt.name,
-        stmt.questionToken,
-        stmt.type,
-        stmt.initializer
-      );
-    } else if (ts.isPropertyAssignment(stmt)) {
-      newStmt = ts.factory.createPropertyAssignment(stmt.name, stmt.initializer);
-    } else if (ts.isVariableStatement(stmt)) {
-      newStmt = ts.factory.createVariableStatement(stmt.modifiers, stmt.declarationList);
-    } else if (ts.isCallExpression(stmt)) {
-      newStmt = ts.factory.createCallExpression(
-        stmt.expression,
-        stmt.typeArguments,
-        stmt.arguments
-      );
-    } else if (ts.isPropertySignature(stmt)) {
-      newStmt = ts.factory.createPropertySignature(
-        stmt.modifiers,
-        stmt.name,
-        stmt.questionToken,
-        stmt.type
-      );
-    } else if (ts.isInterfaceDeclaration(stmt)) {
-      newStmt = ts.factory.createInterfaceDeclaration(
-        stmt.modifiers,
-        stmt.name,
-        stmt.typeParameters,
-        stmt.heritageClauses,
-        stmt.members
-      );
-    } else if (ts.isTypeAliasDeclaration(stmt)) {
-      newStmt = ts.factory.createTypeAliasDeclaration(
-        stmt.modifiers,
-        stmt.name,
-        stmt.typeParameters,
-        stmt.type
-      );
-    }
-    if (newStmt) {
-      ts.addSyntheticLeadingComment(
-        newStmt,
-        ts.SyntaxKind.MultiLineCommentTrivia,
-        '*' + comments.join('\n'),
-        true
-      );
-      this.newNodeMap.set(stmt, newStmt);
-    }
+  addComment(start: number, end: number, comments: string[]) {
+    this.commentList.push([start, end, '\n/**' + comments.join('\n') + '*/']);
+    // ts.addSyntheticLeadingComment(
+    //   stmt,
+    //   ts.SyntaxKind.MultiLineCommentTrivia,
+    //   '*' + comments.join('\n'),
+    //   true
+    // );
   }
   getFunComments(
     stmt:
@@ -169,14 +99,16 @@ export class CommentController {
     if (stmt.parameters) {
       stmt.parameters.forEach((param) => {
         comments.push(
-          ` * @param ${param.type ? `{${param.type.getText()}}` : '{any}'} ${param.name.getText()} - description`
+          ` * @param ${param.type ? `{${param.type.getText().replace(/\s/g, '')}}` : '{any}'} ${param.name.getText().replace(/\s/g, '')} - description`
         );
       });
     }
     //返回值
     if (stmt.type) {
       if (stmt.type.kind !== ts.SyntaxKind.VoidKeyword) {
-        comments.push(` * @returns {${stmt.type.getText() || 'any'}} description`);
+        comments.push(
+          ` * @returns {${stmt.type.getText().replace(/\s/g, '') || 'any'}} description`
+        );
       }
     } else {
       comments.push(` * @returns {any} description`);
@@ -184,7 +116,7 @@ export class CommentController {
     return comments;
   }
   addDocProp(prop: ts.Node) {
-    return (msg?: string[]) => {
+    return (start: number, end: number, msg?: string[]) => {
       const comments: string[] = [];
       if (msg) {
         comments.push(...msg.map((line) => ` * ${line}`));
@@ -192,7 +124,7 @@ export class CommentController {
         comments.push(` * description`);
       }
 
-      this.addComment(prop, comments);
+      this.addComment(start, end, comments);
     };
   }
   addDocFun(
@@ -202,7 +134,7 @@ export class CommentController {
       | ts.ConstructorDeclaration
       | ts.MethodSignature
   ) {
-    return (msg?: string[]) => {
+    return (start: number, end: number, msg?: string[]) => {
       const comments: string[] = [];
       if (msg) {
         comments.push(...msg.map((line) => ` * ${line}`));
@@ -214,7 +146,7 @@ export class CommentController {
         }
       }
       comments.push(...this.getFunComments(stmt));
-      this.addComment(stmt, comments);
+      this.addComment(start, end, comments);
     };
   }
   commentMethod() {
@@ -242,37 +174,42 @@ export class CommentController {
 
       sourceFile = this.dealSourceMethod(sourceFile);
 
-      const newSourceFile = this.transformSource(sourceFile);
+      const newText = this.transformSource(sourceFile);
 
-      const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-      const printed = printer.printFile(newSourceFile);
-      this.replaceSelectText(printed);
+      this.replaceSelectText(newText);
     } else {
-      let text = doc.getText();
+      const text = doc.getText();
 
       if (fileName.endsWith('.vue')) {
-        const dom = new JSDOM(`<html><body>${text}</body></html>`, {
-          contentType: 'text/html'
-        });
-        const script = dom.window.document.querySelector('script');
+        let startIndex = text.indexOf('<script');
+        let endIndex = text.indexOf('</script>');
+        if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+          return;
+        }
+        for (let i = startIndex; i < endIndex; i++) {
+          const c = text[i];
+          if (c === '>') {
+            startIndex = i + 1;
+            break;
+          }
+        }
+        const script = text.substring(startIndex, endIndex);
         if (script) {
-          text = script.textContent;
           if (!text) return;
           let sourceFile = ts.createSourceFile(
             fileName,
-            text,
+            script,
             ts.ScriptTarget.ESNext,
             true,
             ts.ScriptKind.TS
           );
 
           sourceFile = this.dealSourceMethod(sourceFile);
-          const newSourceFile = this.transformSource(sourceFile);
-          const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-          let printed = printer.printFile(newSourceFile);
-          script.textContent = '\n' + printed;
-          this.replaceAllText(dom.window.document.body.innerHTML);
+          const code = this.transformSource(sourceFile);
+
+          const newText = text.substring(0, startIndex) + +'\n' + code + text.substring(endIndex);
+
+          this.replaceAllText(newText);
         }
       } else {
         let sourceFile = ts.createSourceFile(
@@ -285,12 +222,9 @@ export class CommentController {
 
         this.dealSourceMethod(sourceFile);
 
-        const newSourceFile = this.transformSource(sourceFile);
+        const newText = this.transformSource(sourceFile);
 
-        const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-        const printed = printer.printFile(newSourceFile);
-        this.replaceAllText(printed);
+        this.replaceAllText(newText);
       }
     }
   }
@@ -320,37 +254,42 @@ export class CommentController {
 
       sourceFile = this.dealSourceParams(sourceFile);
 
-      const newSourceFile = this.transformSource(sourceFile);
+      const newText = this.transformSource(sourceFile);
 
-      const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-      const printed = printer.printFile(newSourceFile);
-      this.replaceSelectText(printed);
+      this.replaceSelectText(newText);
     } else {
       let text = doc.getText();
 
       if (fileName.endsWith('.vue')) {
-        const dom = new JSDOM(`<html><body>${text}</body></html>`, {
-          contentType: 'text/html'
-        });
-        const script = dom.window.document.querySelector('script');
+        let startIndex = text.indexOf('<script');
+        let endIndex = text.indexOf('</script>');
+        if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+          return;
+        }
+        for (let i = startIndex; i < endIndex; i++) {
+          const c = text[i];
+          if (c === '>') {
+            startIndex = i + 1;
+            break;
+          }
+        }
+        const script = text.substring(startIndex, endIndex);
         if (script) {
-          text = script.textContent;
           if (!text) return;
           let sourceFile = ts.createSourceFile(
             fileName,
-            text,
+            script,
             ts.ScriptTarget.ESNext,
             true,
             ts.ScriptKind.TS
           );
 
           sourceFile = this.dealSourceParams(sourceFile);
-          const newSourceFile = this.transformSource(sourceFile);
-          const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-          let printed = printer.printFile(newSourceFile);
-          script.textContent = '\n' + printed;
-          this.replaceAllText(dom.window.document.body.innerHTML);
+          const code = this.transformSource(sourceFile);
+
+          const newText = text.substring(0, startIndex) + '\n' + code + text.substring(endIndex);
+
+          this.replaceAllText(newText);
         }
       } else {
         let sourceFile = ts.createSourceFile(
@@ -363,12 +302,9 @@ export class CommentController {
 
         sourceFile = this.dealSourceParams(sourceFile);
 
-        const newSourceFile = this.transformSource(sourceFile);
+        const newText = this.transformSource(sourceFile);
 
-        const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-        const printed = printer.printFile(newSourceFile);
-        this.replaceAllText(printed);
+        this.replaceAllText(newText);
       }
     }
   }
@@ -385,7 +321,7 @@ export class CommentController {
             declaration.initializer &&
             ts.isCallExpression(declaration.initializer)
           ) {
-            // this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
+            this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
             declaration.initializer.arguments.forEach((arg) => {
               if (ts.isObjectLiteralExpression(arg)) {
                 arg.properties.forEach((prop) => {
@@ -396,7 +332,7 @@ export class CommentController {
           }
         });
       } else if (ts.isInterfaceDeclaration(stmt)) {
-        // this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
+        this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
 
         stmt.members.forEach((member) => {
           if (ts.isPropertySignature(member)) {
@@ -404,7 +340,7 @@ export class CommentController {
           }
         });
       } else if (ts.isTypeAliasDeclaration(stmt)) {
-        // this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
+        this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
         if (stmt.type && ts.isTypeLiteralNode(stmt.type)) {
           stmt.type.members.forEach((member) => {
             if (ts.isPropertySignature(member)) {
@@ -413,7 +349,7 @@ export class CommentController {
           });
         }
       } else if (ts.isClassDeclaration(stmt)) {
-        // this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
+        this.checkDocs(stmt, sourceFile, this.addDocProp(stmt));
         stmt.members.forEach((member) => {
           if (ts.isPropertyDeclaration(member)) {
             this.checkDocs(member, sourceFile, this.addDocProp(member));
@@ -440,17 +376,20 @@ export class CommentController {
             (ts.isFunctionDeclaration(declaration.initializer) ||
               ts.isArrowFunction(declaration.initializer))
           ) {
-            const addDoc = (msg?: string[]) => {
+            const addDoc = (start: number, end: number, msg?: string[]) => {
               const comments: string[] = [];
               if (msg) {
                 comments.push(...msg.map((line) => ` * ${line}`));
               }
-              //参数
               const func = declaration.initializer;
               if (func && (ts.isFunctionDeclaration(func) || ts.isArrowFunction(func))) {
                 comments.push(...this.getFunComments(func));
               }
-              this.addComment(stmt, comments);
+              if (start !== end) {
+                this.addComment(start, end, comments);
+              } else {
+                this.addComment(stmt.pos, stmt.end, comments);
+              }
             };
             this.checkDocs(declaration, sourceFile, addDoc);
           } else if (
@@ -463,17 +402,17 @@ export class CommentController {
               } else if (ts.isPropertyAssignment(prop)) {
                 const initializer = prop.initializer;
                 if (ts.isFunctionDeclaration(initializer) || ts.isArrowFunction(initializer)) {
-                  const addDoc = (msg?: string[]) => {
+                  const addDoc = (start: number, end: number, msg?: string[]) => {
                     const comments: string[] = [];
                     if (msg) {
                       comments.push(...msg.map((line) => ` * ${line}`));
                     }
-                    //参数
                     const func = initializer;
                     if (func && (ts.isFunctionDeclaration(func) || ts.isArrowFunction(func))) {
                       comments.push(...this.getFunComments(func));
                     }
-                    this.addComment(prop, comments);
+
+                    this.addComment(start, end, comments);
                   };
                   this.checkDocs(prop, sourceFile, addDoc);
                 }
@@ -507,26 +446,27 @@ export class CommentController {
     return sourceFile;
   }
   transformSource(sourceFile: ts.SourceFile) {
-    const nodeMaps = this.newNodeMap;
-    //@ts-ignore
-    const tfactory: ts.TransformerFactory<ts.SourceFile> = (context) => {
-      const visitor: ts.Visitor = (node) => {
-        // 我们只处理 FunctionDeclaration，且有 name（避免匿名）
-        if (nodeMaps.has(node)) {
-          console.log('newNode');
-          return nodeMaps.get(node);
-        }
-        // 默认行为：继续遍历子节点
-        return ts.visitEachChild(node, visitor, context);
-      };
+    const text = sourceFile.text + '';
+    const strs: string[] = [];
+    if (this.commentList.length) {
+      this.commentList.sort((a, b) => a[0] - b[0]);
+      let pre = 0;
 
-      return (node) => ts.visitNode(node, visitor);
-    };
-    const result = ts.transform(sourceFile, [tfactory]);
+      for (let i = 0; i < this.commentList.length; i++) {
+        const item = this.commentList[i];
+        strs.push(text.substring(pre, item[0]));
+        strs.push(item[2]);
+        pre = item[1];
+      }
 
-    return result.transformed[0];
+      strs.push(text.substring(pre));
+
+      return strs.join('');
+    }
+    return text;
   }
   replaceAllText(printed: string) {
+    console.log('replaceAllText:', printed);
     const editor = this.editor;
     editor.edit((editBuilder) => {
       const firstLine = editor.document.lineAt(0);
@@ -536,6 +476,7 @@ export class CommentController {
     });
   }
   replaceSelectText(newText: string) {
+    console.log('replaceSelectText:', newText);
     const editor = this.editor;
     editor.edit((editBuilder) => {
       const selection = editor.selection;
