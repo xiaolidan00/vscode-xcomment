@@ -29,6 +29,10 @@
       {
         "command": "vscode-xcomment.params",
         "title": "xComment:Params"
+      },
+      {
+        "command": "vscode-xcomment.add",
+        "title": "xComment:Add"
       }
     ],
     "menus": {
@@ -46,6 +50,13 @@
           "group": "1_modification@101",
           "alt": "vscode-xcomment.params",
           "key": "alt+S+/"
+        },
+        {
+          "command": "vscode-xcomment.add",
+          "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/",
+          "group": "1_modification@102",
+          "alt": "vscode-xcomment.add",
+          "key": "alt+/"
         }
       ]
     },
@@ -59,6 +70,11 @@
         "command": "vscode-xcomment.params",
         "key": "alt+S+/",
         "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/"
+      },
+      {
+        "command": "vscode-xcomment.add",
+        "key": "alt+/",
+        "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/"
       }
     ]
   },
@@ -71,7 +87,7 @@
     "test": "vscode-test",
     "dev": "node esbuild.js --watch",
     "build": "node esbuild.js --production",
-    "package": "pnpm run compile && vsce package"
+    "package": "pnpm run build && vsce package"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
