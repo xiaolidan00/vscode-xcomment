@@ -9,10 +9,7 @@
     "vscode": "^1.109.0"
   },
   "categories": [
-    "comment",
-    "jsDoc",
-    "vue",
-    "typescript"
+    "Keymaps"
   ],
   "icon": "xcommentlogo.jpg",
   "repository": {
