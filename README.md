@@ -1,18 +1,13 @@
-# vscode-xcomment 自动添加注释
+# vscode-xcomment
 
-支持文件js,ts,vue
+适用范围`vue,ts,js`文件
 
-选中代码或打开文档（未选择文本默认全文档）
+Scope of application: vue, ts, js files
 
-- 右击选择`xComment:Method`或使用快捷键`Alt+A+/`给函数方法添加注释
-- 选中内容，右击`XComment:Params`或使用快捷键`Alt+S+/`给参数属性等添加注释
-- 默认将单行注释转为jsdoc格式
+将光标放置在函数或变量上，按快捷键Alt+/或右击菜单选择AddComment，添加jsDoc注释
 
-https://astexplorer.net/
+Place the cursor on the function or variable, press the shortcut key `Alt+/` or right-click the menu and select `Add Comment` to add a jsDoc comment
 
-右键
-https://code.visualstudio.com/api/references/contribution-points#contributes.menus
+![preview](./preview.gif?raw=true)
 
-## 使用esbuild打包
-
-https://code.visualstudio.com/api/working-with-extensions/bundling-extension
+![rightmenu](./rightmenu.png?raw=true)
