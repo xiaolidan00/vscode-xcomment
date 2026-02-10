@@ -8,6 +8,6 @@ Scope of application: vue, ts, js files
 
 Place the cursor on the function or variable, press the shortcut key `Alt+/` or right-click the menu and select `Add Comment` to add a jsDoc comment
 
-![preview](./preview.gif?raw=true)
+![preview](https://github.com/xiaolidan00/vscode-xcomment/raw/master/preview.gif?raw=true)
 
-![rightmenu](./rightmenu.png?raw=true)
+![rightmenu](https://github.com/xiaolidan00/vscode-xcomment/raw/master/rightmenu.png?raw=true)
