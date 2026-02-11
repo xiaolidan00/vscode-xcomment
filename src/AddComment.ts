@@ -108,10 +108,8 @@ export class AddCommentController {
       });
     }
     //返回值
-    if (stmt.type) {
-      if (stmt.type.kind !== ts.SyntaxKind.VoidKeyword) {
-        comments.push(` * @returns {${stmt.type.getText().replace(/\s/g, '') || 'any'}} description`);
-      }
+    if (!ts.isConstructorDeclaration(stmt) && stmt.type && stmt.type.kind !== ts.SyntaxKind.VoidKeyword) {
+      comments.push(` * @returns {${stmt.type.getText().replace(/\s/g, '') || 'any'}} description`);
     }
     return comments;
   }

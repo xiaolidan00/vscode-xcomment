@@ -1,8 +1,8 @@
 {
   "name": "vscode-xcomment",
   "displayName": "vscode-xcomment",
-  "description": "add jsDoc Comment",
-  "version": "1.0.0",
+  "description": "Add JsDoc Comment",
+  "version": "1.0.1",
   "author": "xiaolidan00",
   "publisher": "xiaolidan00",
   "engines": {
@@ -34,7 +34,7 @@
     "keybindings": [
       {
         "command": "vscode-xcomment.add",
-        "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/",
+        "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue|jsx|tsx)$/",
         "key": "alt+/"
       }
     ],
@@ -42,7 +42,7 @@
       "editor/context": [
         {
           "command": "vscode-xcomment.add",
-          "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue)$/",
+          "when": "editorTextFocus && resourceFilename =~ /.(js|ts|vue|jsx|tsx)$/",
           "group": "1_modification@102",
           "alt": "vscode-xcomment.add",
           "key": "alt+/"
